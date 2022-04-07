@@ -1,0 +1,220 @@
+---
+title: "Mycotoxin Example"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(coda)
+library(ggplot2)
+library(here)
+library(tidyverse)
+library(psych)
+mdir <- "MCSim"
+source(here::here(mdir,"setup_MCSim.R"))
+#set_PATH() # For Windows
+# Make mod.exe (used to create mcsim executable from model file)
+makemod()
+model_file<- "Mycotoxin-PK.model.r"
+makemcsim(model_file)
+calibplotfolder <- "Calibration Plots"
+```
+
+## Run deterministic model with default parameters
+
+```{r deterministic run}
+
+in_file_default <- "Mycotoxin-default-run.in.R" 
+out_file_default <- "Mycotoxin-default-run.out"
+out_default <- mcsim(model_file=model_file, in_file = in_file_default,
+                    out_file = out_file_default)
+out_default_df <- pivot_longer(out_default,cols=2:6)
+# Plot
+ggplot(out_default_df)+geom_line(aes(x=Time,y=value))+
+  facet_wrap(~name,scales="free_y")
+```
+
+## Monte Carlo Simulation Run
+
+```{r Monte Carlo run}
+set.seed(3.14159)
+tvec <- c(0.25,0.5,1,2,4,6,8,12,24,36,48)
+
+in_file_montecarlo <- "Mycotoxin-MonteCarlo-run.in.R" 
+out_file_montecarlo <- "Mycotoxin-MonteCarlo-run.out"
+out_montecarlo <- mcsim(model_file=model_file, in_file = in_file_montecarlo,
+                    out_file = out_file_montecarlo)
+out_montecarlo_df <- pivot_longer(out_montecarlo[,-(2:8)],cols=2:56)
+out_montecarlo_df$ID <- factor(out_montecarlo_df$Iter)
+# Split by variable and time
+namesplit <- str_split(out_montecarlo_df$name,"_1.",simplify = T)
+out_montecarlo_df$variable <- namesplit[,1]
+out_montecarlo_df$Time <- tvec[as.numeric(namesplit[,2])]
+
+# Generate simulated data with noise 
+out_montecarlo_df$simdata <- 0
+## Noise in blood data
+indx <- out_montecarlo_df$variable%in% c("Ccpt_out","Cmet_out")
+out_montecarlo_df$simdata[indx] <- 
+  out_montecarlo_df$value[indx] * 
+  1.2^rnorm(sum(indx))
+## Noise in urine data (noise applied to intervals)
+for (Iter in unique(out_montecarlo_df$Iter)) {
+  for (Qname in c("Qu_out","Q_fec_out","Qu_met_out")) {
+    indx <- out_montecarlo_df$Iter==Iter &
+      out_montecarlo_df$variable==Qname
+    Qu <- out_montecarlo_df$value[indx]
+    dQu <- diff(Qu) * 1.2^rnorm(length(Qu)-1)
+    Qusim <- Qu[1]+c(0,cumsum(dQu))
+    out_montecarlo_df$simdata[indx] <- Qusim
+  }
+}
+out_montecarlo_df$simdata <- signif(out_montecarlo_df$simdata,3)
+# Plot
+ggplot(out_montecarlo_df)+geom_line(aes(x=Time,y=value,color=ID))+
+  geom_point(aes(x=Time,y=simdata,color=ID))+
+  facet_wrap(~variable,scales="free_y")
+
+# Save simulated data
+out_montecarlo_mat<-pivot_wider(out_montecarlo_df,
+                                names_from = "Time",values_from = "simdata",
+                                id_cols = c("ID","variable"))
+write.csv(out_montecarlo_mat,"Mycotoxin-SimData.csv",row.names = FALSE)
+```
+
+```{r calibrate using simulated data}
+
+set.seed(314159) # Change seed until can compute at starting point
+in_file_test <- "Mycotoxin-MCMC-calib.in.R" 
+# Run model
+out_file <- ""
+chains <- list()
+checks <- data.frame()
+samps <- data.frame()
+samps.mcmc <- list()
+
+for (chainnum in 1:4) {
+  outtest.list <- mcsim(model_file=model_file, in_file=in_file_test, chainnum=chainnum)
+  print("Chain: "); print(chainnum)
+  outcheck <- outtest.list$df_check
+  outchain <- outtest.list$df_out
+  # Only save second half (after burn-in)
+  outsamp <- outchain[floor(nrow(outchain) / 2):nrow(outchain), -1]
+  chains <- c(chains, list(as.matrix(outchain)))
+  checks <- rbind(checks, outcheck)
+  samps <- rbind(samps, outsamp)
+  samps.mcmc <- c(samps.mcmc, list(mcmc(outsamp)))
+}
+
+# One random sample, random iteration "checks" from last row of each chain
+checksplot <- ggplot(subset(checks,Output_Var %in% c("Ccpt_out", "Cmet_out", "Qu_out", "Q_fec_out", "Qu_met_out")))+
+  geom_point(aes(x=Data, y=Prediction, color=Output_Var))+
+  scale_x_log10()+
+  scale_y_log10()+
+  geom_abline(slope = 1,intercept = 0)+
+  facet_wrap(~Simulation)
+print(checksplot)
+ggsave(file.path(calibplotfolder,"checksplot_model.calib.pdf"), plot = checksplot, width=10, height=10)
+
+samps.mcmclist <- as.mcmc.list(samps.mcmc)
+save(samps.mcmclist, file = "mcmc_model.calib.Rdata")
+# Contains monte carlo sampling for each parameter
+
+#multicheck
+multicheck <- mcsim.multicheck(model_file=model_file,
+                                 in_file=in_file_test, nsamp = 500)
+save(multicheck, file="multicheck_model.calib.Rdata")
+```
+
+```{r parameters}
+
+rhat <- gelman.diag(samps.mcmclist,autoburnin=FALSE) 
+M_indx <- grep("M_",names(samps))
+SD_indx <- grep("SD_",names(samps))
+Ln_indx <- grep("Ln",names(samps))
+
+rhat.df <- as.data.frame(rhat$psrf)
+rhat.df$par <- factor(rownames(rhat.df),
+                      levels=rev(rownames(rhat.df)))
+rhatplot <- ggplot(rhat.df)+geom_bar(aes(x=par,y=`Point est.`),stat="identity")+
+  coord_flip()+geom_hline(yintercept=1)+
+  theme(axis.text.y = element_text(size = 5))
+
+pdf("DiagnosticPlots_model.calib.pdf",height=8,width=8)
+pairs.panels(samps[,M_indx])
+plot(as.mcmc.list(samps.mcmc)[,M_indx,])
+plot(as.mcmc.list(samps.mcmc)[,SD_indx,])
+plot(as.mcmc.list(samps.mcmc)[,Ln_indx,])
+parmnames <- gsub("M_","",names(samps)[M_indx])
+allindiv.df <- data.frame()
+subsampindx <- sample.int(nrow(samps),50)
+for (i in 1:length(parmnames)) {
+  iparmnames <- paste0(parmnames[i],1:8,".")
+  tmp.samps <- samps[,names(samps) %in% iparmnames]
+  tmp.M <- samps[,rep(paste0("M_",parmnames[i]),8)]
+  tmp.SD <- samps[,rep(paste0("SD_",parmnames[i]),8)]
+  tmp.samps <- exp(tmp.samps*tmp.SD + tmp.M)
+  tmp.samps$iter <- 1:nrow(tmp.samps)
+  tmp.df <- pivot_longer(tmp.samps,1:8)
+  tmp.df$name <- factor(tmp.df$name,levels=rev(iparmnames))
+  p<-ggplot(tmp.df)+geom_boxplot(aes(x=value,y=name))+
+    scale_x_log10()+annotation_logticks(sides="b")
+  print(p)
+  tmp.df$parm <- str_split(tmp.df$name,"\\.",simplify=TRUE)[,1]
+  tmp.df$id <- str_split(tmp.df$name,"\\.",simplify=TRUE)[,3]
+  allindiv.df <- rbind(allindiv.df,subset(tmp.df,iter %in% subsampindx))
+}
+allindiv.df.wide<-pivot_wider(allindiv.df[,-2],names_from=3)
+fillcolor <- viridis::viridis(16)
+pairs.panels(log(allindiv.df.wide[,-(1:2)]),pch=21,
+             bg=fillcolor[as.numeric(allindiv.df.wide$id)])
+
+print(rhatplot)
+dev.off()
+
+
+```
+
+
+```{r compare simulated data and predictions}
+df_check <- multicheck$df_check
+out_montecarlo_df$Simulation <- as.numeric(out_montecarlo_df$ID)
+
+for (varnow in c("Ccpt","Cmet","Qu","Q_fec","Qu_met")) {
+  calib05 <-aggregate(Prediction ~ Simulation + Time,
+                          data=subset(df_check,Output_Var==varnow),
+                          FUN=quantile,prob=0.05)
+  calib50 <-aggregate(Prediction ~ Simulation + Time,
+                          data=subset(df_check,Output_Var==varnow),
+                          FUN=quantile,prob=0.5)
+  calib95 <-aggregate(Prediction ~ Simulation + Time,
+                          data=subset(df_check,Output_Var==varnow),
+                          FUN=quantile,prob=0.95)
+  calib <- left_join(left_join(calib05,calib50,by=c("Simulation","Time")),
+                     calib95,by=c("Simulation","Time"))
+  names(calib)[3:5] <- c("Prediction05","Prediction50","Prediction95")
+  dat <- aggregate(Data ~ Simulation + Time,
+                          data=subset(df_check,Output_Var==paste0(varnow,"_out")),
+                          FUN=quantile,prob=0.5)
+  prediction_calib <- ggplot() + 
+    geom_ribbon(aes(x=Time,ymin=Prediction05,ymax=Prediction95,fill="Fitted 90% CI"),data=calib)+
+    geom_line(aes(x=Time,y=Prediction50,color="Fitted Median"),data=calib,alpha=0.5)+
+    geom_point(aes(x=Time,y=Data,shape="Simulated Data (with error)"), data=dat)+
+    geom_point(aes(x=Time,y=value,shape="Original Values"),
+               data=subset(out_montecarlo_df,variable==paste0(varnow,"_out")))+
+    scale_shape_manual("",values=c(1,16))+
+    scale_fill_viridis_d("",direction = -1)+
+    scale_color_viridis_d("")+
+    ggtitle(varnow)+theme(legend.position = "bottom")+
+    facet_wrap(~Simulation)
+  print(prediction_calib)
+  ggsave(file.path(calibplotfolder,paste0(varnow,".calib.pdf")), plot = prediction_calib, 
+         width=7, height=7)
+}
+
+
+```
+
+
+
+
