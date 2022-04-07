@@ -47,4 +47,7 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Miscellaneous
 Mycotoxin-MCMC-calib1234.samps.check.out
+.DS_Store

@@ -4,7 +4,7 @@ This repository demonstrates fitting a generic PK model for a mycotoxin. The mod
 
 Biomonitoring data are assumed to be collected at t=0.25, 0.5, 1, 2, 4, 6, 8, 12, 24, 36, and 48 h. Data include blood concentrations of mycotoxin and metabolite, cumulative urinary excretion of mycotoxin and metabolite, and cumulative fecal excretion of mycotoxin. 
 
-Model is coded in Gnu MCSim (https://www.gnu.org/software/mcsim/) version 6.1.0.  The "Rmd" file demonstrates the running and fitting of the model. Key details:
+Model is coded in Gnu MCSim (https://www.gnu.org/software/mcsim/) version 6.1.0.  The "Mycotoxin Example.Rmd" file demonstrates the running and fitting of the model. Key details:
 1) "Mycotoxin-PK.model.r" is the model specification file, which includes default parameters and ODEs
 2) "Mycotoxin-default-run.in.R" is the simulation specification file for running the model deterministically using default parameters.
 3) "Mycotoxin-MonteCarlo-run.in.R" is the simulation specification file for running a Monte Carlo simulation -- specifically it generates 8 random individual data. 
