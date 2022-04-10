@@ -33,56 +33,41 @@ out_default_df <- pivot_longer(out_default,cols=2:6)
 ggplot(out_default_df)+geom_line(aes(x=Time,y=value))+
   facet_wrap(~name,scales="free_y")
 ```
+```{r test calibration with short MCMC runs}
+set.seed(314159) # Change seed until can compute at starting point
+in_file_test <- "Mycotoxin-MCMC-test-calib.in.R" 
+# Run model
+out_file <- ""
+chains <- list()
+checks <- data.frame()
+samps <- data.frame()
+samps.mcmc <- list()
 
-## Monte Carlo Simulation Run
-
-```{r Monte Carlo run}
-set.seed(3.14159)
-tvec <- c(0.25,0.5,1,2,4,6,8,12,24,36,48)
-
-in_file_montecarlo <- "Mycotoxin-MonteCarlo-run.in.R" 
-out_file_montecarlo <- "Mycotoxin-MonteCarlo-run.out"
-out_montecarlo <- mcsim(model_file=model_file, in_file = in_file_montecarlo,
-                    out_file = out_file_montecarlo)
-out_montecarlo_df <- pivot_longer(out_montecarlo[,-(2:8)],cols=2:56)
-out_montecarlo_df$ID <- factor(out_montecarlo_df$Iter)
-# Split by variable and time
-namesplit <- str_split(out_montecarlo_df$name,"_1.",simplify = T)
-out_montecarlo_df$variable <- namesplit[,1]
-out_montecarlo_df$Time <- tvec[as.numeric(namesplit[,2])]
-
-# Generate simulated data with noise 
-out_montecarlo_df$simdata <- 0
-## Noise in blood data
-indx <- out_montecarlo_df$variable%in% c("Ccpt_out","Cmet_out")
-out_montecarlo_df$simdata[indx] <- 
-  out_montecarlo_df$value[indx] * 
-  1.2^rnorm(sum(indx))
-## Noise in urine data (noise applied to intervals)
-for (Iter in unique(out_montecarlo_df$Iter)) {
-  for (Qname in c("Qu_out","Q_fec_out","Qu_met_out")) {
-    indx <- out_montecarlo_df$Iter==Iter &
-      out_montecarlo_df$variable==Qname
-    Qu <- out_montecarlo_df$value[indx]
-    dQu <- diff(Qu) * 1.2^rnorm(length(Qu)-1)
-    Qusim <- Qu[1]+c(0,cumsum(dQu))
-    out_montecarlo_df$simdata[indx] <- Qusim
-  }
+for (chainnum in 1:4) {
+  outtest.list <- mcsim(model_file=model_file, in_file=in_file_test, chainnum=chainnum)
+  print("Chain: "); print(chainnum)
+  outcheck <- outtest.list$df_check
+  outchain <- outtest.list$df_out
+  # Only save second half (after burn-in)
+  outsamp <- outchain[floor(nrow(outchain) / 2):nrow(outchain), -1]
+  chains <- c(chains, list(as.matrix(outchain)))
+  checks <- rbind(checks, outcheck)
+  samps <- rbind(samps, outsamp)
+  samps.mcmc <- c(samps.mcmc, list(mcmc(outsamp)))
 }
-out_montecarlo_df$simdata <- signif(out_montecarlo_df$simdata,3)
-# Plot
-ggplot(out_montecarlo_df)+geom_line(aes(x=Time,y=value,color=ID))+
-  geom_point(aes(x=Time,y=simdata,color=ID))+
-  facet_wrap(~variable,scales="free_y")
 
-# Save simulated data
-out_montecarlo_mat<-pivot_wider(out_montecarlo_df,
-                                names_from = "Time",values_from = "simdata",
-                                id_cols = c("ID","variable"))
-write.csv(out_montecarlo_mat,"Mycotoxin-SimData.csv",row.names = FALSE)
+# One random sample, random iteration "checks" from last row of each chain
+checksplot <- ggplot(subset(checks,Output_Var %in% c("Ccpt_out", "Cmet_out", "Qu_out", "Q_fec_out", "Qu_met_out")))+
+  geom_point(aes(x=Data, y=Prediction, color=Output_Var))+
+  scale_x_log10()+
+  scale_y_log10()+
+  geom_abline(slope = 1,intercept = 0)+
+  facet_wrap(~Simulation)
+print(checksplot)
+
 ```
 
-```{r calibrate using simulated data}
+```{r calibrate using MCMC}
 
 set.seed(314159) # Change seed until can compute at starting point
 in_file_test <- "Mycotoxin-MCMC-calib.in.R" 
@@ -215,6 +200,8 @@ for (varnow in c("Ccpt","Cmet","Qu","Q_fec","Qu_met")) {
 
 ```
 
-
+```{r session info}
+sessionInfo()
+```
 
 

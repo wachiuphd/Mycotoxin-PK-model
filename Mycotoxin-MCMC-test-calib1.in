@@ -1,0 +1,170 @@
+Integrate (Lsodes, 1e-4, 1e-6, 1);
+
+MCMC ("MCMC.default.out","",  # name of output and restart file
+      "",                     # name of data file
+      1000,0,                 # iterations, print predictions flag,
+      10,1000,                 # printing frequency, iters to print
+      95.2671704202731);              # random seed (default)95.2671704202731
+
+Level { # population
+  Distrib(M_lnFgutabs, TruncNormal, -0.69, 1.15, -2.30, 0); # Truncated from 0.1 to 1
+  Distrib(M_lnkgutelim, Normal, -1.05, 1.15); # GM = 0.35, GSD = sqrt(10)
+  Distrib(M_lnktot, Normal, -1.20, 1.15); # GM = 0.30, GSD = sqrt(10)
+  Distrib(M_lnkufrac, TruncNormal, -1.20, 1.15, -4.61, -0.01); # GM = 0.3, GSD = sqrt(10)
+  Distrib(M_lnkumet, Normal, -0.50, 1.15); # GM = 0.60, GSD = sqrt(10)
+  Distrib(M_lnVdist, Normal, 0, 1.15); # GM = 1.0, GSD = sqrt(10)
+  Distrib(M_lnVdistmet, Normal, 0, 1.15); # GM = 1.0, GSD = sqrt(10)
+  
+  Distrib(SD_lnFgutabs, HalfNormal, 0.2);
+  Distrib(SD_lnkgutelim, HalfNormal, 0.2); 
+  Distrib(SD_lnktot, HalfNormal, 0.2);
+  Distrib(SD_lnkufrac, HalfNormal, 0.2);
+  Distrib(SD_lnkumet, HalfNormal, 0.2);
+  Distrib(SD_lnVdist, HalfNormal, 0.2);
+  Distrib(SD_lnVdistmet, HalfNormal, 0.2);
+  
+  Distrib(GSD_Ccpt, LogUniform, 1.1, 1.3);
+  Distrib(GSD_Cmet, LogUniform, 1.1, 1.3);
+  Distrib(GSD_Qu, LogUniform, 1.1, 1.3);
+  Distrib(GSD_Q_fec, LogUniform, 1.1, 1.3);
+  Distrib(GSD_Qu_met, LogUniform, 1.1, 1.3);
+  
+  Likelihood(Data(Ccpt_out), LogNormal, Prediction(Ccpt_out), GSD_Ccpt);
+  Likelihood(Data(Cmet_out), LogNormal, Prediction(Cmet_out), GSD_Cmet);
+  Likelihood(Data(Q_fec_out), LogNormal, Prediction(Q_fec_out), GSD_Q_fec);
+  Likelihood(Data(Qu_out), LogNormal, Prediction(Qu_out), GSD_Qu);
+  Likelihood(Data(Qu_met_out), LogNormal, Prediction(Qu_met_out), GSD_Qu_met);
+  
+  Level { # individual
+    Distrib(lnFgutabs, Normal, 0, 1);
+    Distrib(lnkgutelim , Normal, 0, 1);
+    Distrib(lnktot, Normal, 0, 1);
+    Distrib(lnkufrac, Normal, 0, 1);
+    Distrib(lnkumet, Normal, 0, 1);
+    Distrib(lnVdist, Normal, 0, 1);
+    Distrib(lnVdistmet, Normal, 0, 1);
+    
+    Simulation {
+      #ID0
+      InitDose    = 100;    # ingested dose (mmol)
+      BW         = 70;      # body weight (kg)
+      
+      Print(Ccpt_out, Cmet_out, Qu_out, Q_fec_out, Qu_met_out, 0.25, 0.5, 1, 2, 4, 6, 8, 12, 24, 36, 48);
+      Data(Ccpt_out, 0.249, 0.34, 0.584, 0.592, 0.526, 0.313, 0.195, 0.0813, 0.00346, 0.00013, 0.00000447);
+      Data(Cmet_out, 0.00254, 0.0131, 0.0439, 0.0921, 0.112, 0.102, 0.07, 0.0277, 0.0014, 0.0000871, 0.00000357);
+      Data(Qu_out, 0.161, 0.69, 1.98, 6.1, 15.6, 19.2, 22.6, 24.8, 26.2, 26.3, 26.3);
+      Data(Q_fec_out, 8.65, 14.9, 27.5, 36.6, 40.8, 41.6, 41.8, 41.8, 41.8, 41.8, 41.8);
+      Data(Qu_met_out, 0.00913, 0.103, 0.423, 2.85, 9.56, 18.3, 24.4, 30.5, 34.1, 34.3, 34.3);
+      PrintStep(Ccpt, Cmet, Qu, Q_fec, Qu_met, 0, 48, 0.1);
+      Print(AUC, 48);
+    }
+    
+    Simulation {
+      #ID1
+      InitDose    = 100;    # ingested dose (mmol)
+      BW         = 70;      # body weight (kg)
+      
+      Print(Ccpt_out, Cmet_out, Qu_out, Q_fec_out, Qu_met_out, 0.25, 0.5, 1, 2, 4, 6, 8, 12, 24, 36, 48);
+      Data(Ccpt_out, 0.308, 0.433, 0.824, 0.583, 0.687, 0.348, 0.148, 0.0589, 0.00283, 0.000173, 0.0000115);
+      Data(Cmet_out, 0.00668, 0.0168, 0.0664, 0.162, 0.142, 0.0928, 0.0879, 0.0356, 0.00129, 0.000138, 0.00000663);
+      Data(Qu_out, 0.215, 0.919, 2.48, 5.78, 11.1, 14, 16.3, 18.4, 19.4, 19.4, 19.4);
+      Data(Q_fec_out, 9.44, 15.5, 21.5, 25.6, 26.4, 26.4, 26.4, 26.4, 26.4, 26.4, 26.4);
+      Data(Qu_met_out, 0.0268, 0.181, 1.3, 5.15, 21, 33.3, 41.4, 51.5, 57.6, 58, 58);
+      PrintStep(Ccpt, Cmet, Qu, Q_fec, Qu_met, 0, 48, 0.1);
+      Print(AUC, 48);
+    }
+
+    Simulation {
+      #ID2
+      InitDose    = 100;    # ingested dose (mmol)
+      BW         = 70;      # body weight (kg)
+      
+      Print(Ccpt_out, Cmet_out, Qu_out, Q_fec_out, Qu_met_out, 0.25, 0.5, 1, 2, 4, 6, 8, 12, 24, 36, 48);
+      Data(Ccpt_out, 0.148, 0.182, 0.382, 0.356, 0.294, 0.216, 0.121, 0.0345, 0.000525, 0.0000095, 0.000000153);
+      Data(Cmet_out, 0.00221, 0.00826, 0.0333, 0.0758, 0.0944, 0.09, 0.042, 0.0152, 0.000295, 0.00000495, 0.0000000905);
+      Data(Qu_out, 0.0906, 0.277, 1.14, 3.56, 8.39, 12.1, 15, 16.1, 16.7, 16.7, 16.7);
+      Data(Q_fec_out, 5.75, 10.6, 20, 31.9, 41.2, 43.3, 44, 44.2, 44.2, 44.2, 44.2);
+      Data(Qu_met_out, 0.0156, 0.116, 0.863, 4.19, 15.6, 28.1, 36.8, 43.2, 46.1, 46.2, 46.2);
+      PrintStep(Ccpt, Cmet, Qu, Q_fec, Qu_met, 0, 48, 0.1);
+      Print(AUC, 48);
+    }
+    
+    Simulation {
+      #ID3
+      InitDose    = 100;    # ingested dose (mmol)
+      BW         = 70;      # body weight (kg)
+      
+      Print(Ccpt_out, Cmet_out, Qu_out, Q_fec_out, Qu_met_out, 0.25, 0.5, 1, 2, 4, 6, 8, 12, 24, 36, 48);
+      Data(Ccpt_out, 0.0951, 0.199, 0.252, 0.419, 0.331, 0.3, 0.138, 0.0663, 0.00196, 0.0000753, 0.00000341);
+      Data(Cmet_out, 0.00226, 0.00715, 0.0204, 0.0698, 0.134, 0.111, 0.0606, 0.0305, 0.00106, 0.0000678, 0.0000022);
+      Data(Qu_out, 0.0945, 0.4, 1.34, 3.48, 9.91, 13.4, 16.9, 18.7, 20.2, 20.2, 20.3);
+      Data(Q_fec_out, 6.42, 11.5, 22.2, 33.6, 43.3, 45.9, 46.9, 47.2, 47.2, 47.2, 47.2);
+      Data(Qu_met_out, 0.00819, 0.0769, 0.396, 2.51, 12.1, 23.8, 31.6, 37.9, 42.7, 42.9, 42.9);
+      PrintStep(Ccpt, Cmet, Qu, Q_fec, Qu_met, 0, 48, 0.1);
+      Print(AUC, 48);
+    }
+    
+    Simulation {
+      #ID4
+      InitDose    = 100;    # ingested dose (mmol)
+      BW         = 70;      # body weight (kg)
+      
+      Print(Ccpt_out, Cmet_out, Qu_out, Q_fec_out, Qu_met_out, 0.25, 0.5, 1, 2, 4, 6, 8, 12, 24, 36, 48);
+      Data(Ccpt_out, 0.144, 0.229, 0.32, 0.347, 0.323, 0.171, 0.106, 0.0368, 0.000444, 0.00000553, 0.000000108);
+      Data(Cmet_out, 0.00195, 0.00927, 0.0233, 0.0522, 0.0845, 0.0446, 0.04, 0.011, 0.000292, 0.00000225, 0.000000045);
+      Data(Qu_out, 0.093, 0.25, 1.3, 4.09, 9.92, 13.3, 15.5, 16.8, 17.2, 17.2, 17.2);
+      Data(Q_fec_out, 7.06, 14, 21.8, 37.3, 47.6, 50.6, 51.7, 52, 52, 52, 52);
+      Data(Qu_met_out, 0.011, 0.0816, 0.487, 2.62, 10.6, 18.3, 25.6, 29.7, 31.5, 31.6, 31.6);
+      PrintStep(Ccpt, Cmet, Qu, Q_fec, Qu_met, 0, 48, 0.1);
+      Print(AUC, 48);
+    }
+    
+    Simulation {
+      #ID5
+      InitDose    = 100;    # ingested dose (mmol)
+      BW         = 70;      # body weight (kg)
+      
+      Print(Ccpt_out, Cmet_out, Qu_out, Q_fec_out, Qu_met_out, 0.25, 0.5, 1, 2, 4, 6, 8, 12, 24, 36, 48);
+      Data(Ccpt_out, 0.148, 0.234, 0.392, 0.344, 0.34, 0.224, 0.147, 0.0578, 0.00136, 0.0000504, 0.00000176);
+      Data(Cmet_out, 0.00263, 0.0113, 0.0545, 0.097, 0.112, 0.112, 0.0736, 0.0269, 0.00126, 0.0000395, 0.00000105);
+      Data(Qu_out, 0.117, 0.398, 1.39, 3.59, 10.8, 15.8, 18.8, 22.2, 23.4, 23.5, 23.5);
+      Data(Q_fec_out, 6.43, 11.1, 19.8, 29.8, 38.9, 41.2, 41.7, 41.9, 41.9, 41.9, 41.9);
+      Data(Qu_met_out, 0.0113, 0.0837, 0.707, 4.41, 13.7, 27.2, 34.5, 42.5, 46.4, 46.5, 46.6);
+      PrintStep(Ccpt, Cmet, Qu, Q_fec, Qu_met, 0, 48, 0.1);
+      Print(AUC, 48);
+    }
+    
+    Simulation {
+      #ID6
+      InitDose    = 100;    # ingested dose (mmol)
+      BW         = 70;      # body weight (kg)
+      
+      Print(Ccpt_out, Cmet_out, Qu_out, Q_fec_out, Qu_met_out, 0.25, 0.5, 1, 2, 4, 6, 8, 12, 24, 36, 48);
+      Data(Ccpt_out, 0.148, 0.202, 0.32, 0.506, 0.455, 0.198, 0.0911, 0.0306, 0.000489, 0.0000159, 0.000000333);
+      Data(Cmet_out, 0.00595, 0.0137, 0.0399, 0.0946, 0.127, 0.118, 0.0617, 0.0199, 0.000575, 0.000012, 0.000000246);
+      Data(Qu_out, 0.128, 0.342, 1.46, 3.61, 8.19, 12.3, 14.3, 17.1, 17.7, 17.7, 17.7);
+      Data(Q_fec_out, 7.06, 14.1, 21.7, 33.9, 40.7, 42.7, 43.2, 43.3, 43.3, 43.3, 43.3);
+      Data(Qu_met_out, 0.0124, 0.0764, 0.408, 2.84, 11.7, 20.9, 25.5, 31.4, 34, 34, 34);
+      PrintStep(Ccpt, Cmet, Qu, Q_fec, Qu_met, 0, 48, 0.1);
+      Print(AUC, 48);
+    }
+    
+    Simulation {
+      #ID7
+      InitDose    = 100;    # ingested dose (mmol)
+      BW         = 70;      # body weight (kg)
+      
+      Print(Ccpt_out, Cmet_out, Qu_out, Q_fec_out, Qu_met_out, 0.25, 0.5, 1, 2, 4, 6, 8, 12, 24, 36, 48);
+      Data(Ccpt_out, 0.117, 0.102, 0.216, 0.306, 0.175, 0.0796, 0.0292, 0.00565, 0.0000351, 0.000000219, 0.000000000566);
+      Data(Cmet_out, 0.00508, 0.0145, 0.0707, 0.096, 0.146, 0.133, 0.0963, 0.0291, 0.000296, 0.00000444, 0.0000000166);
+      Data(Qu_out, 0.161, 0.575, 1.58, 4.91, 11.4, 14.8, 16.1, 17.2, 17.4, 17.4, 17.4);
+      Data(Q_fec_out, 9.14, 13.6, 28.4, 46.4, 55.2, 57.7, 58.1, 58.3, 58.3, 58.3, 58.3);
+      Data(Qu_met_out, 0.00906, 0.0689, 0.443, 2.81, 9.41, 15.5, 18.8, 25.5, 27.2, 27.3, 27.3);
+      PrintStep(Ccpt, Cmet, Qu, Q_fec, Qu_met, 0, 48, 0.1);
+      Print(AUC, 48);
+    }
+    
+  }
+}
+
+End.
