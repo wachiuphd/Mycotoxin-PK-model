@@ -1,4 +1,3 @@
-knitr::opts_chunk$set(echo = TRUE)
 library(coda)
 library(ggplot2)
 library(here)
@@ -15,7 +14,6 @@ calibplotfolder <- "Calibration Plots"
 
 ## Monte Carlo Simulation Run
 
-```{r Monte Carlo run}
 set.seed(3.14159)
 tvec <- c(0.25,0.5,1,2,4,6,8,12,24,36,48)
 
