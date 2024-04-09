@@ -33,9 +33,11 @@ out_default_df <- pivot_longer(out_default,cols=2:6)
 ggplot(out_default_df)+geom_line(aes(x=Time,y=value))+
   facet_wrap(~name,scales="free_y")
 ```
+
 ```{r test calibration with short MCMC runs}
 set.seed(314159) # Change seed until can compute at starting point
 in_file_test <- "Mycotoxin-MCMC-test-calib.in.R" 
+n_indiv <- 8 # Number of individuals 
 # Run model
 out_file <- ""
 chains <- list()
@@ -71,6 +73,7 @@ print(checksplot)
 
 set.seed(314159) # Change seed until can compute at starting point
 in_file_test <- "Mycotoxin-MCMC-calib.in.R" 
+n_indiv <- 8 # Number of individuals 
 # Run model
 out_file <- ""
 chains <- list()
@@ -134,13 +137,13 @@ parmnames <- gsub("M_","",names(samps)[M_indx])
 allindiv.df <- data.frame()
 subsampindx <- sample.int(nrow(samps),50)
 for (i in 1:length(parmnames)) {
-  iparmnames <- paste0(parmnames[i],1:8,".")
+  iparmnames <- paste0(parmnames[i],1:n_indiv,".")
   tmp.samps <- samps[,names(samps) %in% iparmnames]
-  tmp.M <- samps[,rep(paste0("M_",parmnames[i]),8)]
-  tmp.SD <- samps[,rep(paste0("SD_",parmnames[i]),8)]
+  tmp.M <- samps[,rep(paste0("M_",parmnames[i]),n_indiv)]
+  tmp.SD <- samps[,rep(paste0("SD_",parmnames[i]),n_indiv)]
   tmp.samps <- exp(tmp.samps*tmp.SD + tmp.M)
   tmp.samps$iter <- 1:nrow(tmp.samps)
-  tmp.df <- pivot_longer(tmp.samps,1:8)
+  tmp.df <- pivot_longer(tmp.samps,1:n_indiv)
   tmp.df$name <- factor(tmp.df$name,levels=rev(iparmnames))
   p<-ggplot(tmp.df)+geom_boxplot(aes(x=value,y=name))+
     scale_x_log10()+annotation_logticks(sides="b")
