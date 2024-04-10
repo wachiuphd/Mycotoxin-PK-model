@@ -166,7 +166,8 @@ dev.off()
 
 ```{r compare simulated data and predictions}
 df_check <- multicheck$df_check
-out_montecarlo_df$Simulation <- as.numeric(out_montecarlo_df$ID)
+out_montecarlo_df <- read.csv("Mycotoxin-SimData-df.csv")
+out_montecarlo_df$Simulation <- as.numeric(as.factor(out_montecarlo_df$ID))
 
 for (varnow in c("Ccpt","Cmet","Qu","Q_fec","Qu_met")) {
   calib05 <-aggregate(Prediction ~ Simulation + Time,

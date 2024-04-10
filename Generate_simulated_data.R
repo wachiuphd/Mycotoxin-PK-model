@@ -52,6 +52,7 @@ ggplot(out_montecarlo_df)+geom_line(aes(x=Time,y=value,color=ID))+
   geom_point(aes(x=Time,y=simdata,color=ID))+
   facet_wrap(~variable,scales="free_y")
 
+write.csv(out_montecarlo_df,"Mycotoxin-SimData-df.csv",row.names = FALSE)
 # Save simulated data
 out_montecarlo_mat<-pivot_wider(out_montecarlo_df,
                                 names_from = "Time",values_from = "simdata",
