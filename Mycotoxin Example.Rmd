@@ -164,10 +164,8 @@ dev.off()
 ```
 
 
-```{r compare simulated data and predictions}
+```{r compare data and predictions}
 df_check <- multicheck$df_check
-out_montecarlo_df <- read.csv("Mycotoxin-SimData-df.csv")
-out_montecarlo_df$Simulation <- as.numeric(as.factor(out_montecarlo_df$ID))
 
 for (varnow in c("Ccpt","Cmet","Qu","Q_fec","Qu_met")) {
   calib05 <-aggregate(Prediction ~ Simulation + Time,
@@ -188,9 +186,7 @@ for (varnow in c("Ccpt","Cmet","Qu","Q_fec","Qu_met")) {
   prediction_calib <- ggplot() + 
     geom_ribbon(aes(x=Time,ymin=Prediction05,ymax=Prediction95,fill="Fitted 90% CI"),data=calib)+
     geom_line(aes(x=Time,y=Prediction50,color="Fitted Median"),data=calib,alpha=0.5)+
-    geom_point(aes(x=Time,y=Data,shape="Simulated Data (with error)"), data=dat)+
-    geom_point(aes(x=Time,y=value,shape="Original Values"),
-               data=subset(out_montecarlo_df,variable==paste0(varnow,"_out")))+
+    geom_point(aes(x=Time,y=Data,shape="Data"), data=dat)+
     scale_shape_manual("",values=c(1,16))+
     scale_fill_viridis_d("",direction = -1)+
     scale_color_viridis_d("")+
