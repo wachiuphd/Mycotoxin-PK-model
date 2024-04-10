@@ -4,7 +4,7 @@ MCMC ("MCMC.default.out","",  # name of output and restart file
       "",                     # name of data file
       50000,0,                 # iterations, print predictions flag,
       50,50000,                 # printing frequency, iters to print
-      95.2671704202731);              # random seed (default)95.2671704202731
+      95.2671704202731);              # template random seed 95.2671704202731 -- do not change, this will be replaced
 
 Level { # population
   Distrib(M_lnFgutabs, TruncNormal, -0.69, 1.15, -2.30, 0); # Truncated from 0.1 to 1

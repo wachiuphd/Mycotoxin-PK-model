@@ -4,7 +4,7 @@ MCMC ("MCMC.default.out","Mycotoxin-MCMC-calib4.out",  # name of output and rest
       "",                     # name of data file
       50000,1,                 # iterations, print predictions flag,
       50,50000,                 # printing frequency, iters to print
-      10101010);              # random seed (default)10101010
+      10101010);              # template random seed 10101010 -- do not change, this will be replaced
 
 Level { # population
   Distrib(M_lnFgutabs, TruncNormal, -0.69, 1.15, -2.30, 0); # Truncated from 0.1 to 1
